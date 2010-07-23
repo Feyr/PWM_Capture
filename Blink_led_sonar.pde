@@ -50,7 +50,6 @@ Timer* timer2=  (Timer*)TIMER2_BASE;
 
 
 
-
 // The setup() method runs once, when the sketch starts
 void setup()   {                
     SerialUSB.println("Entering Setup");
@@ -75,22 +74,24 @@ timer2->CR2 = BIT(7) ;
   then a falling pulse triggers:
       counter copy from CNT to CCR2
     
-    
     rinse and repeat. which mean we have to read CCR1 and CCR2 before the next rising pulse
     
     notes: 
-    
     both CC need to have TI1 as a source of event (CCxS  S for source)
     but opposite polarity (CCxP   P for polarity)
   */  
 
+// disable everything, for some reason it's enabled and registers are read only when enabled
+timer2->CCER = 0  ; 
+timer2->CR1=0;
 
-
+// reset to make sure it's not wrongly initialized
+timer2->CCMR1 = 0;
+timer2->CCMR2 = 0;
 // set CCMR1 CC1S to 01 (set active input TI1) 
 /// 01: CC1 channel is configured as input, IC1 is mapped on TI1.
 timer2->CCMR1 &= ~BIT(1);
 timer2->CCMR1 |= BIT(0);
-
 // set CCMR1 CC2S to 10 (set active input TI1) 
 ///  10: CC2 channel is configured as input, IC2 is mapped on TI1
 timer2->CCMR1 |= BIT(9);
@@ -121,27 +122,21 @@ timer2->SMCR |= BIT(2);
 
 //enable CC modules
 timer2->CCER |= (BIT0 | BIT4);
-//timer2->CR1 |= 1; // enable timer2
+timer2->CR1 |= 1; // enable timer2
 //timer2->DIER= BIT(2) | BIT(1) | BIT(0);
 
 }
 
-// difference between two values in a counter that may wrap around
-uint32 counterDifference(uint32 begin, uint32 end, uint32 counterMax) {
-        if (end > begin) {
-            return end-begin;
-        }
-       return (counterMax - begin) + end;
-}
+
 
 void readSonar() {
   const int pingPin= D2;
 
 // reset CC counts
-timer2->CCR1=0;  
-timer2->CCR2=0;
+//timer2->CCR1=0;  
+//timer2->CCR2=0;
 // and status
-timer2->SR=0;
+//timer2->SR=0;
 
 
 
@@ -164,6 +159,17 @@ timer2->SR=0;
  
 
     SerialUSB.println("\r\nDuration "); 
+   SerialUSB.println(timer2->CR1);
+    SerialUSB.println(timer2->CR2);
+    SerialUSB.println(timer2->SMCR);
+    SerialUSB.println(timer2->DIER);
+    SerialUSB.println(timer2->SR);
+    SerialUSB.println(timer2->EGR);
+    SerialUSB.println(timer2->CCMR1);
+    SerialUSB.println(timer2->CCMR2);
+    SerialUSB.println(timer2->CCER);
+    SerialUSB.println(timer2->PSC);
+    
     SerialUSB.println(timer2->CCR1);
     SerialUSB.println(timer2->CCR2);
     SerialUSB.println(timer2->CNT);
@@ -178,4 +184,6 @@ void loop()
    readSonar();
   SerialUSB.println("End");    
 }
+
+
 
