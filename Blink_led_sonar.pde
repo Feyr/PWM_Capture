@@ -1,37 +1,6 @@
-/*
-  Blink
- 
- Turns on an LED on for one second, then off for one second, repeatedly.
- 
- The circuit:
- * LED connected from digital pin 13 to ground.
- 
- * Note: On most Arduino boards, there is already an LED on the board
- connected to pin 13, so you don't need any extra components for this example.
- 
- 
- Created 1 June 2005
- By David Cuartielles
- 
- http://arduino.cc/en/Tutorial/Blink
- 
- based on an orginal by H. Barragan for the Wiring i/o board
- 
- */
 
-int ledPin =  13;    // LED connected to digital pin 13
-
-#include "systick.h"
-inline uint32 micros() {
-//  uint32* m= (uint32*)(uint32)systick_get_count;
-  return uint32(systick_get_count());
-//  put the overflow bit at bit32. this means we're off by a factor of 10 but since the precision is crap anyway it's OK
-//   m = ( mm >> 1 ) & ( COUNTFLAG << 31 );
-
-   
-}
-
-
+#include <systick.h>
+#include <rcc.h>
 
 typedef struct {
     volatile uint16 CR1;
@@ -80,34 +49,17 @@ typedef struct {
 Timer* timer2=  (Timer*)TIMER2_BASE;
 
 
-#include <rcc.h>
+
 
 // The setup() method runs once, when the sketch starts
 void setup()   {                
     SerialUSB.println("Entering Setup");
   // initialize the digital pin as an output:
-  pinMode(ledPin, OUTPUT);     
-  pinMode(0, OUTPUT);
-  pinMode(5, OUTPUT);
 
 
 // init timer 
 rcc_enable_clk_timer2();
 rcc_enable_clk_gpioa();
-//timer2->CR1 = ARPE;
-//timer2->CR2 = ARPE;
-/*
-//timer2->CR1 = BIT(4) | BIT(7);
-timer2->ARR=0xfffe;
-timer2->CR2 = BIT(7) ;
-timer2->CR2 = BIT(6) ; // MMS mode: from OC1REF
-timer2->CCMR1=0;
-timer2->CCR1=0;
-timer2->CCR2=0;
-timer2->CNT=0;
-timer2->CCER = 0;
-*/
-
 // CH1 is connected to TI1 input
 timer2->CR2 = BIT(7) ;
 
@@ -167,14 +119,8 @@ timer2->SMCR &= ~BIT(1) ;
 timer2->SMCR |= BIT(2);
 
 
-// BDTR?
-//timer2->BDTR |= BIT(15) | BIT(14);
-
-// clock divisor
-timer2->CR1|=BIT(9)&BIT(8);
-
-//enable
-//timer2->CCER |= 0x1 | (0x1 << 4);
+//enable CC modules
+timer2->CCER |= (BIT0 | BIT4);
 //timer2->CR1 |= 1; // enable timer2
 //timer2->DIER= BIT(2) | BIT(1) | BIT(0);
 
@@ -191,10 +137,12 @@ uint32 counterDifference(uint32 begin, uint32 end, uint32 counterMax) {
 void readSonar() {
   const int pingPin= D2;
 
+// reset CC counts
 timer2->CCR1=0;  
 timer2->CCR2=0;
+// and status
 timer2->SR=0;
-timer2->CCER |= (BIT0 | BIT4);
+
 
 
   pinMode(pingPin, OUTPUT);
@@ -206,59 +154,28 @@ timer2->CCER |= (BIT0 | BIT4);
 
 //  initialize pin to receive pwm timing
   delayMicroseconds(2);
-  pinMode(pingPin, INPUT_FLOATING);
+  pinMode(pingPin, INPUT);
 
+// wait 40ms, the sonar spec ensure us a pulse will never be wider than 35ms and then only if nothing is detected. 25ms if something is detected
   delay(40);   
-//timer2->CCER |= ~(BIT0 | BIT4);
 
 
-
-
-
-/*
 // wait for pin HIGH
-  while(digitalRead(pingPin)!=HIGH) { asm volatile("nop"); };
-  long begin=micros();
  
- 
-   while(digitalRead(pingPin)==HIGH) { asm volatile("nop");      };
-   long end=micros();
 
-begin=end-begin;
-  digitalWrite(5, HIGH);   // emit on pin 5
-  delay(begin);                  // wait for a second
-  digitalWrite(5, LOW);    // set the LED off
-*/
-
-
-    SerialUSB.print("\r\nDuration "); 
+    SerialUSB.println("\r\nDuration "); 
     SerialUSB.println(timer2->CCR1);
     SerialUSB.println(timer2->CCR2);
     SerialUSB.println(timer2->CNT);
     SerialUSB.print("\n"); 
 }
-// the loop() method runs over and over again,
-// as long as the Arduino has power
-void quickflash() {
-  SerialUSB.println("Quickflash");
-  digitalWrite(ledPin, HIGH);   // set the LED on
-  delay(100);                  // wait for a second
-  digitalWrite(ledPin, LOW);    // set the LED off
-  delay(100);                  // wait for a second
-  digitalWrite(ledPin, HIGH);   // set the LED on
-}
+
 
 void loop()                     
 {
   SerialUSB.println("Entering Loop");
-  quickflash();
-  digitalWrite(0, HIGH);   // set the LED on
-  delay(250);                  // wait for a second
-  digitalWrite(0, LOW);   // set the LED on
-  digitalWrite(ledPin, LOW);    // set the LED off
-  delay(250);                  // wait for a second
-  SerialUSB.println("End"); 
-  readSonar();
-    
+  delay(250); 
+   readSonar();
+  SerialUSB.println("End");    
 }
 
